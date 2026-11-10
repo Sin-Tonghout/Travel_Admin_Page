@@ -1,0 +1,53 @@
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes pop-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.96); }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slide-out-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes slide-out-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+.anim-overlay[data-state="open"] { animation: fade-in 200ms var(--ease-standard); }
+.anim-overlay[data-state="closed"] { animation: fade-out 150ms var(--ease-standard) forwards; }
+
+.anim-pop[data-state="open"] { animation: pop-in 180ms var(--ease-standard); }
+.anim-pop[data-state="closed"] { animation: pop-out 120ms var(--ease-standard) forwards; }
+
+.anim-drawer-right[data-state="open"] { animation: slide-in-right 250ms var(--ease-standard); }
+.anim-drawer-right[data-state="closed"] { animation: slide-out-right 200ms var(--ease-standard) forwards; }
+.anim-drawer-left[data-state="open"] { animation: slide-in-left 250ms var(--ease-standard); }
+.anim-drawer-left[data-state="closed"] { animation: slide-out-left 200ms var(--ease-standard) forwards; }
+
+@keyframes contour-rotate {
+  to { transform: rotate(360deg); }
+}
+@keyframes route-flow {
+  to { stroke-dashoffset: -280; }
+}
+
+.anim-contour { animation: contour-rotate 240s linear infinite; }
+.anim-route { animation: route-flow 14s linear infinite; }
