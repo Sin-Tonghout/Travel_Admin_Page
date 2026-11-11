@@ -21,6 +21,7 @@ function getPages(page: number, count: number): (number | "…")[] {
 
 export function Pagination({ page, pageCount, onPageChange }: PaginationProps) {
   if (pageCount <= 1) return null;
+
   return (
     <nav aria-label="Pagination" className="flex items-center gap-1">
       <Button
@@ -32,24 +33,33 @@ export function Pagination({ page, pageCount, onPageChange }: PaginationProps) {
       >
         <ChevronLeft className="size-4" />
       </Button>
-      {getPages(page, pageCount).map((p, i) =>
-        p === "…" ? (
-          <span key={`e${i}`} className="px-2 text-foreground-muted" aria-hidden>
-            …
-          </span>
-        ) : (
-          <Button
-            key={p}
-            size="icon-sm"
-            variant={p === page ? "primary" : "ghost"}
-            aria-label={`Page ${p}`}
-            aria-current={p === page ? "page" : undefined}
-            onClick={() => onPageChange(p)}
-          >
-            {p}
-          </Button>
-        ),
-      )}
+
+      {/* Small screens: a short label instead of up to seven numbered buttons. */}
+      <span className="px-3 text-sm tabular-nums text-foreground-muted sm:hidden">
+        Page {page} of {pageCount}
+      </span>
+
+      <div className="hidden items-center gap-1 sm:flex">
+        {getPages(page, pageCount).map((p, i) =>
+          p === "…" ? (
+            <span key={`e${i}`} className="px-2 text-foreground-muted" aria-hidden>
+              …
+            </span>
+          ) : (
+            <Button
+              key={p}
+              size="icon-sm"
+              variant={p === page ? "primary" : "ghost"}
+              aria-label={`Page ${p}`}
+              aria-current={p === page ? "page" : undefined}
+              onClick={() => onPageChange(p)}
+            >
+              {p}
+            </Button>
+          ),
+        )}
+      </div>
+
       <Button
         variant="outline"
         size="icon-sm"

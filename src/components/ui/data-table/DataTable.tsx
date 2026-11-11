@@ -1,178 +1,74 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { SearchBar } from "@/components/ui/search-bar/SearchBar";
-import { Pagination } from "@/components/ui/pagination/Pagination";
-import { Skeleton } from "@/components/ui/skeleton/Skeleton";
-import { EmptyState, NoResults } from "@/components/ui/empty-state/EmptyState";
-import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-interface DataTableProps<TData> {
-  columns: ColumnDef<TData, any>[];
-  data: TData[];
-  pageSize?: number;
-  loading?: boolean;
-  searchPlaceholder?: string;
-  emptyTitle?: string;
-  emptyDescription?: string;
-  onRowClick?: (row: TData) => void;
+interface PaginationProps {
+  page: number; // 1-based
+  pageCount: number;
+  onPageChange: (page: number) => void;
 }
 
-const SKELETON_ROWS = [0, 1, 2, 3, 4];
+function getPages(page: number, count: number): (number | "…")[] {
+  if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1);
+  const pages: (number | "…")[] = [1];
+  const start = Math.max(2, page - 1);
+  const end = Math.min(count - 1, page + 1);
+  if (start > 2) pages.push("…");
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (end < count - 1) pages.push("…");
+  pages.push(count);
+  return pages;
+}
 
-export function DataTable<TData>({
-  columns,
-  data,
-  pageSize = 8,
-  loading = false,
-  searchPlaceholder = "Search…",
-  emptyTitle = "Nothing here yet",
-  emptyDescription,
-  onRowClick,
-}: DataTableProps<TData>) {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [searchKey, setSearchKey] = useState(0);
-
-  const table = useReactTable<TData>({
-    data,
-    columns,
-    state: { sorting, globalFilter },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageIndex: 0, pageSize } },
-  });
-
-  const filteredCount = table.getFilteredRowModel().rows.length;
-  const { pageIndex, pageSize: size } = table.getState().pagination;
-  const from = filteredCount === 0 ? 0 : pageIndex * size + 1;
-  const to = Math.min((pageIndex + 1) * size, filteredCount);
-  const columnCount = table.getVisibleLeafColumns().length;
-
-  const clearSearch = () => {
-    setGlobalFilter("");
-    setSearchKey((k) => k + 1); // remounts SearchBar so its text box empties too
-  };
+export function Pagination({ page, pageCount, onPageChange }: PaginationProps) {
+  if (pageCount <= 1) return null;
 
   return (
-    <div className="space-y-3">
-      <SearchBar
-        key={searchKey}
-        onSearch={setGlobalFilter}
-        placeholder={searchPlaceholder}
-        className="max-w-sm"
-      />
+    <nav aria-label="Pagination" className="flex items-center gap-1">
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-label="Previous page"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        <ChevronLeft className="size-4" />
+      </Button>
 
-      <div className="overflow-x-auto rounded-xl border bg-surface">
-        <table className="w-full text-sm">
-          <thead className="border-b bg-surface-muted/60">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  const sorted = header.column.getIsSorted();
-                  const canSort = header.column.getCanSort();
-                  const content = header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext());
+      {/* Small screens: a short label instead of up to seven numbered buttons. */}
+      <span className="px-3 text-sm tabular-nums text-foreground-muted sm:hidden">
+        Page {page} of {pageCount}
+      </span>
 
-                  return (
-                    <th
-                      key={header.id}
-                      scope="col"
-                      aria-sort={
-                        sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined
-                      }
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground-muted"
-                    >
-                      {canSort && !header.isPlaceholder ? (
-                        <button
-                          type="button"
-                          onClick={header.column.getToggleSortingHandler()}
-                          className="inline-flex items-center gap-1 uppercase hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-                        >
-                          {content}
-                          {sorted === "asc" ? (
-                            <ArrowUp className="size-3.5" />
-                          ) : sorted === "desc" ? (
-                            <ArrowDown className="size-3.5" />
-                          ) : (
-                            <ArrowUpDown className="size-3.5 opacity-50" />
-                          )}
-                        </button>
-                      ) : (
-                        content
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            ))}
-          </thead>
-
-          <tbody>
-            {loading
-              ? SKELETON_ROWS.map((rowIndex) => (
-                  <tr key={`skeleton-${rowIndex}`} className="border-b last:border-0">
-                    {Array.from({ length: columnCount }, (_unused, colIndex) => colIndex).map(
-                      (colIndex) => (
-                        <td key={`skeleton-${rowIndex}-${colIndex}`} className="px-4 py-3">
-                          <Skeleton className="h-4 w-full" />
-                        </td>
-                      ),
-                    )}
-                  </tr>
-                ))
-              : table.getRowModel().rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                    className={cn(
-                      "border-b transition-colors last:border-0 hover:bg-surface-muted/60",
-                      onRowClick && "cursor-pointer",
-                    )}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-          </tbody>
-        </table>
+      <div className="hidden items-center gap-1 sm:flex">
+        {getPages(page, pageCount).map((p, i) =>
+          p === "…" ? (
+            <span key={`e${i}`} className="px-2 text-foreground-muted" aria-hidden>
+              …
+            </span>
+          ) : (
+            <Button
+              key={p}
+              size="icon-sm"
+              variant={p === page ? "primary" : "ghost"}
+              aria-label={`Page ${p}`}
+              aria-current={p === page ? "page" : undefined}
+              onClick={() => onPageChange(p)}
+            >
+              {p}
+            </Button>
+          ),
+        )}
       </div>
 
-      {!loading && filteredCount === 0 && data.length === 0 && (
-        <EmptyState title={emptyTitle} description={emptyDescription} />
-      )}
-
-      {!loading && filteredCount === 0 && data.length > 0 && <NoResults onClear={clearSearch} />}
-
-      {!loading && filteredCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-foreground-muted">
-            Showing {from}–{to} of {filteredCount}
-          </p>
-          <Pagination
-            page={pageIndex + 1}
-            pageCount={table.getPageCount()}
-            onPageChange={(p) => table.setPageIndex(p - 1)}
-          />
-        </div>
-      )}
-    </div>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        aria-label="Next page"
+        disabled={page >= pageCount}
+        onClick={() => onPageChange(page + 1)}
+      >
+        <ChevronRight className="size-4" />
+      </Button>
+    </nav>
   );
 }

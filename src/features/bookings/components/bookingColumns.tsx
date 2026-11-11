@@ -3,12 +3,20 @@ import { format, parseISO } from "date-fns";
 import { Link } from "react-router-dom";
 import { BookingRowActions } from "@/features/bookings/components/BookingRowActions";
 import { BookingStatusBadge } from "@/features/bookings/components/BookingStatusBadge";
+import { formatTravelers } from "@/features/bookings/lib/format";
 import { PaymentStatusBadge } from "@/features/payments/components/PaymentStatusBadge";
 import { formatCurrency } from "@/lib/formatters";
 import type { BookingRecord } from "@/types/booking";
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-
+/**
+ * Which columns stay as the window narrows (the sidebar takes space from 1024px up):
+ *   always:    Booking, Customer, Status, Actions
+ *   ≥ 768px:   + Travel date, Total
+ *   ≥ 1280px:  + Payment
+ *   ≥ 1536px:  + Tour
+ *   ≥ 1700px:  + Travelers
+ * Below 640px the page shows cards instead of this table.
+ */
 export function buildBookingColumns(onCancel: (booking: BookingRecord) => void): ColumnDef<BookingRecord>[] {
   return [
     {
@@ -39,6 +47,7 @@ export function buildBookingColumns(onCancel: (booking: BookingRecord) => void):
       id: "tour",
       header: "Tour",
       accessorFn: (r) => `${r.tour} ${r.destination}`,
+      meta: { className: "hidden 2xl:table-cell" },
       cell: ({ row }) => (
         <div>
           <p className="max-w-56 truncate font-medium">{row.original.tour}</p>
@@ -49,22 +58,22 @@ export function buildBookingColumns(onCancel: (booking: BookingRecord) => void):
     {
       accessorKey: "date",
       header: "Travel date",
+      meta: { className: "hidden md:table-cell" },
       cell: ({ row }) => <span className="whitespace-nowrap">{format(parseISO(row.original.date), "MMM d, yyyy")}</span>,
     },
     {
       id: "travelers",
       header: "Travelers",
       accessorFn: (r) => r.adults + r.children,
+      meta: { className: "hidden min-[1700px]:table-cell" },
       cell: ({ row }) => (
-        <span className="whitespace-nowrap">
-          {plural(row.original.adults, "adult")}
-          {row.original.children > 0 && ` · ${plural(row.original.children, "child").replace("childs", "children")}`}
-        </span>
+        <span className="whitespace-nowrap">{formatTravelers(row.original.adults, row.original.children)}</span>
       ),
     },
     {
       accessorKey: "total",
       header: "Total",
+      meta: { className: "hidden md:table-cell" },
       cell: ({ row }) => <span className="font-semibold tabular-nums">{formatCurrency(row.original.total)}</span>,
     },
     {
@@ -75,6 +84,7 @@ export function buildBookingColumns(onCancel: (booking: BookingRecord) => void):
     {
       accessorKey: "payment",
       header: "Payment",
+      meta: { className: "hidden xl:table-cell" },
       cell: ({ row }) => <PaymentStatusBadge status={row.original.payment} />,
     },
     {

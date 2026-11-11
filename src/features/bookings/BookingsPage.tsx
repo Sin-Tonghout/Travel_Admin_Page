@@ -12,13 +12,16 @@ import { useBookingFilters } from "@/features/bookings/hooks/useBookingFilters";
 import { useBookings } from "@/features/bookings/hooks/useBookings";
 import { cn } from "@/lib/utils";
 import type { BookingRecord } from "@/types/booking";
+import { BookingCard } from "@/features/bookings/components/BookingCard";
 
 const NO_BOOKINGS: BookingRecord[] = [];
 
 export function BookingsPage() {
   const navigate = useNavigate();
   const filterState = useBookingFilters();
-  const { data, isLoading, isError, isFetching, refetch } = useBookings(filterState.filters);
+  const { data, isLoading, isError, isFetching, refetch } = useBookings(
+    filterState.filters,
+  );
   const [cancelTarget, setCancelTarget] = useState<BookingRecord | null>(null);
   const columns = useMemo(() => buildBookingColumns(setCancelTarget), []);
 
@@ -49,16 +52,31 @@ export function BookingsPage() {
             onRetry={() => refetch()}
           />
         ) : (
-          <div aria-busy={isFetching} className={cn("transition-opacity duration-150", isFetching && !isLoading && "opacity-60")}>
+          <div
+            aria-busy={isFetching}
+            className={cn(
+              "transition-opacity duration-150",
+              isFetching && !isLoading && "opacity-60",
+            )}
+          >
             <DataTable<BookingRecord>
               columns={columns}
               data={data ?? NO_BOOKINGS}
               loading={isLoading}
               pageSize={10}
               searchPlaceholder="Search by booking, customer or tour"
-              emptyTitle={filtered ? "No bookings match these filters" : "No bookings yet"}
-              emptyDescription={filtered ? "Try clearing some filters." : "New reservations will appear here."}
-              onRowClick={(row) => navigate(`/admin/bookings/${row.id}`)}
+              emptyTitle={
+                filtered ? "No bookings match these filters" : "No bookings yet"
+              }
+              emptyDescription={
+                filtered
+                  ? "Try clearing some filters."
+                  : "New reservations will appear here."
+              }
+              onRowClick={(row: BookingRecord) => navigate(`/admin/bookings/${row.id}`)}
+              renderCard={(booking: BookingRecord) => (
+                <BookingCard booking={booking} onCancel={setCancelTarget} />
+              )}
             />
           </div>
         )}

@@ -1,49 +1,46 @@
-import { format, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { Pencil } from "lucide-react";
-import type { ReactNode } from "react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { CopyButton } from "@/components/shared/CopyButton";
 import { Alert } from "@/components/ui/alert/Alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card/Card";
-import { Divider } from "@/components/ui/divider/Divider";
 import { Skeleton } from "@/components/ui/skeleton/Skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs/Tabs";
 import { BookingLoadError } from "@/features/bookings/components/BookingLoadError";
-import { BookingStatusActions } from "@/features/bookings/components/BookingStatusActions";
 import { BookingStatusBadge } from "@/features/bookings/components/BookingStatusBadge";
+import { BookingContactCard, BookingSummaryCard } from "@/features/bookings/components/BookingSummaryCard";
 import { BookingTimeline } from "@/features/bookings/components/BookingTimeline";
 import { CancelBookingDialog } from "@/features/bookings/components/CancelBookingDialog";
+import { CollapsibleSection, HeaderPill } from "@/features/bookings/components/CollapsibleSection";
 import { PriceBreakdown } from "@/features/bookings/components/PriceBreakdown";
-import { TravelerInfo } from "@/features/bookings/components/TravelerInfo";
+import { FieldGrid, ReadOnlyField, SubHeading } from "@/features/bookings/components/ReadOnlyField";
 import { useBooking, useMarkBookingPaid } from "@/features/bookings/hooks/useBookings";
 import { priceForBooking } from "@/features/bookings/lib/pricing";
 import { isEditable } from "@/features/bookings/lib/workflow";
 import { PaymentStatusBadge } from "@/features/payments/components/PaymentStatusBadge";
+import { formatCurrency } from "@/lib/formatters";
+import { tours } from "@/mocks/tours";
 import type { BookingRecord } from "@/types/booking";
 
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium">{children}</dd>
-    </div>
-  );
-}
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const link = "text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring";
 
 function DetailSkeleton() {
   return (
     <div role="status" aria-busy="true" className="space-y-6">
       <span className="sr-only">Loading booking…</span>
-      <Skeleton className="h-10 w-72" />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Skeleton className="h-56 w-full" />
-          <Skeleton className="h-44 w-full" />
+      <Skeleton className="h-9 w-64" />
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="space-y-4">
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-80 w-full" />
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-20 w-full" />
         </div>
-        <div className="space-y-6">
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-56 w-full" />
+        <div className="space-y-4">
+          <Skeleton className="h-[34rem] w-full" />
+          <Skeleton className="h-20 w-full" />
         </div>
       </div>
     </div>
@@ -59,133 +56,161 @@ export function BookingDetailPage() {
   if (isLoading) return <DetailSkeleton />;
   if (isError || !booking) return <BookingLoadError error={error} onRetry={() => refetch()} />;
 
-  const cancelEvent = [...booking.history].reverse().find((e) => e.title === "Booking cancelled");
+  const tour = tours.find((t) => t.id === booking.tourId);
+  const travel = parseISO(booking.date);
+  const days = differenceInCalendarDays(travel, new Date());
+  const when =
+    days === 0 ? "Today" : days > 0 ? `In ${plural(days, "day", "days")}` : `${plural(Math.abs(days), "day", "days")} ago`;
   const lastUpdate = [...booking.history].sort((a, b) => b.at.localeCompare(a.at))[0];
+  const cancelEvent = [...booking.history].reverse().find((e) => e.title === "Booking cancelled");
   const canMarkPaid = booking.status !== "cancelled" && (booking.payment === "pending" || booking.payment === "failed");
 
   return (
-    <>
-      <PageHeader
-        title={`Booking ${booking.id}`}
-        description={`${booking.customer} · ${booking.tour}`}
-        actions={
-          isEditable(booking) ? (
-            <Button asChild variant="outline">
-              <Link to={`/admin/bookings/${booking.id}/edit`}>
-                <Pencil className="size-4" />
-                Edit
-              </Link>
-            </Button>
-          ) : undefined
-        }
-      />
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1">
+          <h1 className="text-2xl font-bold tracking-tight">Booking {booking.id}</h1>
+          <CopyButton text={booking.id} label="Copy booking ID" />
+        </div>
+        <BookingStatusBadge status={booking.status} />
+        <PaymentStatusBadge status={booking.payment} />
+      </header>
 
       {booking.status === "cancelled" && (
-        <Alert variant="danger" title="This booking was cancelled" className="mb-6">
+        <Alert variant="danger" title="This booking was cancelled">
           {cancelEvent?.detail ?? "No reason was recorded."}
         </Alert>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Trip details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                <Detail label="Tour">{booking.tour}</Detail>
-                <Detail label="Destination">{booking.destination}</Detail>
-                <Detail label="Travel date">{format(parseISO(booking.date), "EEEE, MMM d, yyyy")}</Detail>
-                <Detail label="Booked on">{format(parseISO(booking.createdAt), "MMM d, yyyy · h:mm a")}</Detail>
-                <div className="sm:col-span-2">
-                  <Detail label="Notes">{booking.notes || <span className="font-normal text-foreground-muted">No notes</span>}</Detail>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
+        {/* On phones the summary and its actions come first. */}
+        <aside className="order-1 space-y-4 lg:sticky lg:top-24 lg:order-2">
+          <BookingSummaryCard booking={booking} onCancel={() => setCancelTarget(booking)} />
+          <BookingContactCard booking={booking} />
+        </aside>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TravelerInfo
-                name={booking.customer}
-                email={booking.customerEmail}
-                phone={booking.customerPhone}
-                adults={booking.adults}
-                children={booking.children}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        <div className="order-2 space-y-4 lg:order-1">
+          <CollapsibleSection index={1} title="Customer details">
+            <SubHeading>Lead traveler</SubHeading>
+            <FieldGrid>
+              <ReadOnlyField label="Full name">{booking.customer}</ReadOnlyField>
+              <ReadOnlyField label="Adults">{booking.adults}</ReadOnlyField>
+              <ReadOnlyField label="Children">{booking.children}</ReadOnlyField>
+            </FieldGrid>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <BookingStatusBadge status={booking.status} />
-                <PaymentStatusBadge status={booking.payment} />
-              </div>
+            <SubHeading className="mt-8">Contact information</SubHeading>
+            <FieldGrid cols={2}>
+              <ReadOnlyField label="Email address">
+                <a href={`mailto:${booking.customerEmail}`} className={link}>
+                  {booking.customerEmail}
+                </a>
+              </ReadOnlyField>
+              <ReadOnlyField label="Mobile no">
+                <a href={`tel:${booking.customerPhone.replace(/\s/g, "")}`} className={link}>
+                  {booking.customerPhone}
+                </a>
+              </ReadOnlyField>
+            </FieldGrid>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            index={2}
+            title="Trip details"
+            headerExtra={
+              isEditable(booking) ? (
+                <HeaderPill>
+                  <Link to={`/admin/bookings/${booking.id}/edit`} className={`inline-flex items-center gap-1.5 font-semibold ${link}`}>
+                    <Pencil aria-hidden className="size-3.5" />
+                    Edit
+                  </Link>
+                </HeaderPill>
+              ) : undefined
+            }
+          >
+            <SubHeading>Tour</SubHeading>
+            <FieldGrid>
+              <ReadOnlyField label="Tour">{booking.tour}</ReadOnlyField>
+              <ReadOnlyField label="Destination">{booking.destination}</ReadOnlyField>
+              <ReadOnlyField label="Duration">{tour ? plural(tour.durationDays, "day", "days") : undefined}</ReadOnlyField>
+            </FieldGrid>
+
+            <SubHeading className="mt-8">Schedule</SubHeading>
+            <FieldGrid>
+              <ReadOnlyField label="Travel date">{format(travel, "EEE, MMM d, yyyy")}</ReadOnlyField>
+              <ReadOnlyField label="Countdown">{when}</ReadOnlyField>
+              <ReadOnlyField label="Booked on">{format(parseISO(booking.createdAt), "MMM d, yyyy")}</ReadOnlyField>
               {lastUpdate && (
-                <p className="text-xs text-foreground-muted">
-                  Last updated <time dateTime={lastUpdate.at}>{format(parseISO(lastUpdate.at), "MMM d, yyyy · h:mm a")}</time>
-                </p>
+                <ReadOnlyField label="Last updated" className="sm:col-span-3">
+                  {format(parseISO(lastUpdate.at), "MMM d, yyyy · h:mm a")}
+                </ReadOnlyField>
               )}
-              <Divider />
-              <BookingStatusActions booking={booking} onCancel={() => setCancelTarget(booking)} />
-            </CardContent>
-          </Card>
+            </FieldGrid>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Price & payment</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <PriceBreakdown summary={priceForBooking(booking)} />
-              <Divider />
-              <div className="flex flex-wrap items-center justify-between gap-2">
+            <SubHeading className="mt-8">Special requests</SubHeading>
+            <FieldGrid cols={2}>
+              <ReadOnlyField label="Notes" multiline className="sm:col-span-2">
+                {booking.notes}
+              </ReadOnlyField>
+            </FieldGrid>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            index={3}
+            title="Payment details"
+            headerExtra={
+              <HeaderPill>
                 <PaymentStatusBadge status={booking.payment} />
+              </HeaderPill>
+            }
+          >
+            <Tabs defaultValue="payment">
+              <TabsList className="mb-6">
+                <TabsTrigger value="payment">Payment</TabsTrigger>
+                <TabsTrigger value="breakdown">Price breakdown</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="payment" className="space-y-5 pt-0">
+                <SubHeading>Payment status</SubHeading>
+                <FieldGrid>
+                  <ReadOnlyField label="Status">
+                    <PaymentStatusBadge status={booking.payment} />
+                  </ReadOnlyField>
+                  <ReadOnlyField label="Total amount">{formatCurrency(booking.total)}</ReadOnlyField>
+                  <ReadOnlyField label="Travelers">
+                    {plural(booking.adults + booking.children, "traveler", "travelers")}
+                  </ReadOnlyField>
+                </FieldGrid>
+
                 {canMarkPaid && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    loading={markPaid.isPending}
-                    onClick={() => markPaid.mutate(booking.id)}
-                  >
+                  <Button variant="outline" loading={markPaid.isPending} onClick={() => markPaid.mutate(booking.id)}>
                     Mark as paid
                   </Button>
                 )}
-              </div>
-              {booking.payment === "failed" && booking.status !== "cancelled" && (
-                <Alert variant="danger" title="Payment failed">
-                  Contact the customer, then mark it as paid once the money arrives.
-                </Alert>
-              )}
-              {booking.status === "cancelled" && booking.payment === "paid" && (
-                <Alert variant="warning" title="Refund needed">
-                  This cancelled booking was paid. Issue a refund from Payments.
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
+                {booking.payment === "failed" && booking.status !== "cancelled" && (
+                  <Alert variant="danger" title="Payment failed">
+                    Contact the customer, then mark it as paid once the money arrives.
+                  </Alert>
+                )}
+                {booking.status === "cancelled" && booking.payment === "paid" && (
+                  <Alert variant="warning" title="Refund needed">
+                    This cancelled booking was paid. Issue a refund from Payments.
+                  </Alert>
+                )}
+              </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <BookingTimeline events={booking.history} />
-            </CardContent>
-          </Card>
+              <TabsContent value="breakdown" className="max-w-md pt-0">
+                <PriceBreakdown summary={priceForBooking(booking)} />
+              </TabsContent>
+            </Tabs>
+          </CollapsibleSection>
+
+          <CollapsibleSection index={4} title="Activity" defaultOpen={false}>
+            <BookingTimeline events={booking.history} />
+          </CollapsibleSection>
         </div>
       </div>
 
       <CancelBookingDialog booking={cancelTarget} onClose={() => setCancelTarget(null)} />
-    </>
+    </div>
   );
 }
