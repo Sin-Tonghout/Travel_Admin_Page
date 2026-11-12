@@ -16,7 +16,7 @@ interface QuickAction {
 
 const actions: QuickAction[] = [
   { label: "New booking", to: "/admin/bookings/new", icon: Plus, module: "bookings" },
-  { label: "Add tour", to: "/admin/tours", icon: Luggage, module: "tours" },
+  { label: "Add tour", to: "/admin/tours/new", icon: Luggage, module: "tours" },
   { label: "Add destination", to: "/admin/destinations", icon: MapPin, module: "destinations" },
   { label: "Create promotion", to: "/admin/promotions", icon: Tag, module: "promotions" },
   { label: "Open reports", to: "/admin/reports", icon: ChartColumn, module: "reports" },

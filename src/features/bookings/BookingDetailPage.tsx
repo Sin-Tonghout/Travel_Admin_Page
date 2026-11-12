@@ -12,9 +12,9 @@ import { BookingStatusBadge } from "@/features/bookings/components/BookingStatus
 import { BookingContactCard, BookingSummaryCard } from "@/features/bookings/components/BookingSummaryCard";
 import { BookingTimeline } from "@/features/bookings/components/BookingTimeline";
 import { CancelBookingDialog } from "@/features/bookings/components/CancelBookingDialog";
-import { CollapsibleSection, HeaderPill } from "@/features/bookings/components/CollapsibleSection";
+import { CollapsibleSection, HeaderPill } from "@/components/shared/CollapsibleSection";
 import { PriceBreakdown } from "@/features/bookings/components/PriceBreakdown";
-import { FieldGrid, ReadOnlyField, SubHeading } from "@/features/bookings/components/ReadOnlyField";
+import { FieldGrid, ReadOnlyField, SubHeading } from "@/components/shared/ReadOnlyField";
 import { useBooking, useMarkBookingPaid } from "@/features/bookings/hooks/useBookings";
 import { priceForBooking } from "@/features/bookings/lib/pricing";
 import { isEditable } from "@/features/bookings/lib/workflow";

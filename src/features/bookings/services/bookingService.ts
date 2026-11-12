@@ -14,6 +14,14 @@ const delay = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
 const clone = <T>(value: T): T => structuredClone(value);
 const today = () => format(new Date(), "yyyy-MM-dd");
 
+/** How many bookings each tour has. Used by the Tours module (mock only). */
+export function countBookingsByTour(): Record<string, number> {
+  return store.reduce<Record<string, number>>((acc, b) => {
+    acc[b.tourId] = (acc[b.tourId] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
 function makeEvent(type: BookingEvent["type"], title: string, actor: string, detail?: string): BookingEvent {
   return {
     id: `ev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

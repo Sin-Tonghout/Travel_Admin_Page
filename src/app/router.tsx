@@ -20,7 +20,7 @@ const lazyRoute = (module: AppModule, load: () => Promise<ComponentType>) => asy
 };
 
 // Modules that have real pages. The rest still show placeholders.
-const builtModules = ["dashboard", "bookings"];
+const builtModules = ["dashboard", "bookings", "tours", "destinations"];
 
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/admin/dashboard" replace /> },
@@ -42,23 +42,99 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="dashboard" replace /> },
       {
         path: "dashboard",
-        lazy: lazyRoute("dashboard", async () => (await import("@/features/dashboard/DashboardPage")).DashboardPage),
+        lazy: lazyRoute(
+          "dashboard",
+          async () => (await import("@/features/dashboard/DashboardPage")).DashboardPage,
+        ),
       },
       {
         path: "bookings",
-        lazy: lazyRoute("bookings", async () => (await import("@/features/bookings/BookingsPage")).BookingsPage),
+        lazy: lazyRoute(
+          "bookings",
+          async () => (await import("@/features/bookings/BookingsPage")).BookingsPage,
+        ),
       },
       {
         path: "bookings/new",
-        lazy: lazyRoute("bookings", async () => (await import("@/features/bookings/NewBookingPage")).NewBookingPage),
+        lazy: lazyRoute(
+          "bookings",
+          async () => (await import("@/features/bookings/NewBookingPage")).NewBookingPage,
+        ),
       },
       {
         path: "bookings/:id",
-        lazy: lazyRoute("bookings", async () => (await import("@/features/bookings/BookingDetailPage")).BookingDetailPage),
+        lazy: lazyRoute(
+          "bookings",
+          async () =>
+            (await import("@/features/bookings/BookingDetailPage")).BookingDetailPage,
+        ),
       },
       {
         path: "bookings/:id/edit",
-        lazy: lazyRoute("bookings", async () => (await import("@/features/bookings/EditBookingPage")).EditBookingPage),
+        lazy: lazyRoute(
+          "bookings",
+          async () =>
+            (await import("@/features/bookings/EditBookingPage")).EditBookingPage,
+        ),
+      },
+      {
+        path: "tours",
+        lazy: lazyRoute(
+          "tours",
+          async () => (await import("@/features/tours/ToursPage")).ToursPage,
+        ),
+      },
+      {
+        path: "tours/new",
+        lazy: lazyRoute(
+          "tours",
+          async () => (await import("@/features/tours/NewTourPage")).NewTourPage,
+        ),
+      },
+      {
+        path: "tours/:id",
+        lazy: lazyRoute(
+          "tours",
+          async () => (await import("@/features/tours/TourDetailPage")).TourDetailPage,
+        ),
+      },
+      {
+        path: "tours/:id/edit",
+        lazy: lazyRoute(
+          "tours",
+          async () => (await import("@/features/tours/EditTourPage")).EditTourPage,
+        ),
+      },
+      {
+        path: "destinations",
+        lazy: lazyRoute(
+          "destinations",
+          async () =>
+            (await import("@/features/destinations/DestinationsPage")).DestinationsPage,
+        ),
+      },
+      {
+        path: "destinations/new",
+        lazy: lazyRoute(
+          "destinations",
+          async () =>
+            (await import("@/features/destinations/NewDestinationPage")).default,
+        ),
+      },
+      {
+        path: "destinations/:id",
+        lazy: lazyRoute(
+          "destinations",
+          async () =>
+            (await import("@/features/destinations/DestinationDetailPage")).default,
+        ),
+      },
+      {
+        path: "destinations/:id/edit",
+        lazy: lazyRoute(
+          "destinations",
+          async () => (await import("@/features/destinations/EditDestinationPage")).default,
+        ),
       },
       ...allNavItems
         .filter((item) => !builtModules.includes(item.module))
@@ -76,7 +152,8 @@ export const router = createBrowserRouter([
   {
     path: "/admin/design-system",
     lazy: async () => {
-      const { DesignSystemPage } = await import("@/features/design-system/DesignSystemPage");
+      const { DesignSystemPage } =
+        await import("@/features/design-system/DesignSystemPage");
       return {
         Component: () => (
           <RequireAuth>
