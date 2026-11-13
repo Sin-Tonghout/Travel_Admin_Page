@@ -44,7 +44,7 @@ export function AvailabilityPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-72" />
-        <Skeleton className="h-[520px] w-full" />
+        <Skeleton className="h-520px w-full" />
       </div>
     );
   }
