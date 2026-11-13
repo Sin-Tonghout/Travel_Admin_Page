@@ -6,6 +6,8 @@ import { tours } from "@/mocks/tours";
 import { ApiError } from "@/services/api-error";
 import type { BookingEvent, BookingFilters, BookingInput, BookingRecord, BookingStatus } from "@/types/booking";
 import type { Tour } from "@/types/tour";
+import type { PaymentStatus } from "@/types/payment";
+import { getOverride } from "@/features/availability/lib/overrides";
 
 // In-memory "database". It resets when the page reloads. Phase 10 replaces these functions with API calls.
 let store: BookingRecord[] = buildSeed();
@@ -20,6 +22,25 @@ export function countBookingsByTour(): Record<string, number> {
     acc[b.tourId] = (acc[b.tourId] ?? 0) + 1;
     return acc;
   }, {});
+}
+
+/** A copy of every booking. Used by the Customers module (mock only). */
+export function snapshotBookings(): BookingRecord[] {
+  return clone(store);
+}
+
+/** Used by the Payments module (mock only): logs a payment event and can change the payment status. */
+export function recordPaymentEvent(
+  id: string,
+  actor: string,
+  title: string,
+  detail?: string,
+  payment?: PaymentStatus,
+): BookingRecord {
+  const record = find(id);
+  if (payment) record.payment = payment;
+  record.history.push(makeEvent("payment", title, actor, detail));
+  return clone(record);
 }
 
 function makeEvent(type: BookingEvent["type"], title: string, actor: string, detail?: string): BookingEvent {
@@ -39,16 +60,46 @@ function find(id: string): BookingRecord {
   return record;
 }
 
+/** Why a tour can't take `travelers` more people on `date`, or null when it can. */
+function dateBlocker(tour: Tour, date: string, travelers: number, excludeId?: string): string | null {
+  const override = getOverride(tour.id, date);
+  if (override?.blocked) {
+    return `${tour.name} is not available on ${date}.${override.note ? ` (${override.note})` : ""}`;
+  }
+  const capacity = override?.capacity ?? tour.capacity;
+  const booked = store
+    .filter((b) => b.tourId === tour.id && b.date === date && b.status !== "cancelled" && b.id !== excludeId)
+    .reduce((sum, b) => sum + b.adults + b.children, 0);
+  if (booked + travelers > capacity) {
+    const left = Math.max(0, capacity - booked);
+    return left === 0
+      ? `${tour.name} is fully booked on ${date}.`
+      : `Only ${left} ${left === 1 ? "seat is" : "seats are"} left on ${date}.`;
+  }
+  return null;
+}
+
 function validateInput(input: BookingInput, existing?: BookingRecord): { tour: Tour; total: number } {
   const tour = tours.find((t) => t.id === input.tourId && (t.published || existing?.tourId === t.id));
   if (!tour) throw new ApiError(422, "Choose a published tour.");
   if (input.adults < 1) throw new ApiError(422, "At least one adult is required.");
-  if (input.adults + input.children > tour.capacity) {
+  const travelers = input.adults + input.children;
+  if (travelers > tour.capacity) {
     throw new ApiError(422, `This tour holds at most ${tour.capacity} travelers.`);
   }
   const dateChanged = !existing || existing.date !== input.travelDate;
   if (dateChanged && input.travelDate < today()) {
     throw new ApiError(422, "The travel date can't be in the past.");
+  }
+  // Existing bookings are never rejected; only changes to the tour, date or group size are checked.
+  const changed =
+    !existing ||
+    existing.tourId !== tour.id ||
+    existing.date !== input.travelDate ||
+    existing.adults + existing.children !== travelers;
+  if (changed) {
+    const blocker = dateBlocker(tour, input.travelDate, travelers, existing?.id);
+    if (blocker) throw new ApiError(409, blocker);
   }
   return { tour, total: calculatePrice(tour, input.adults, input.children).total };
 }

@@ -6,6 +6,7 @@ import { NotFoundPage } from "@/components/shared/NotFoundPage";
 import { PlaceholderPage } from "@/components/shared/PlaceholderPage";
 import { allNavItems } from "@/lib/navigation";
 import type { AppModule } from "@/lib/permissions";
+import { RouteError } from "@/components/shared/RouteError";
 
 /** Loads a page on demand and wraps it in the permission check for its module. */
 const lazyRoute = (module: AppModule, load: () => Promise<ComponentType>) => async () => {
@@ -16,11 +17,12 @@ const lazyRoute = (module: AppModule, load: () => Promise<ComponentType>) => asy
         <Page />
       </RequirePermission>
     ),
+    ErrorBoundary: RouteError,
   };
 };
 
 // Modules that have real pages. The rest still show placeholders.
-const builtModules = ["dashboard", "bookings", "tours", "destinations"];
+const builtModules = ["dashboard", "bookings", "tours", "destinations", "customers", "payments", "availability"];
 
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/admin/dashboard" replace /> },
@@ -134,6 +136,48 @@ export const router = createBrowserRouter([
         lazy: lazyRoute(
           "destinations",
           async () => (await import("@/features/destinations/EditDestinationPage")).default,
+        ),
+      },
+      {
+        path: "customers",
+        lazy: lazyRoute(
+          "customers",
+          async () => (await import("@/features/customers/CustomersPage")).CustomersPage,
+        ),
+      },
+      {
+        path: "customers/:id",
+        lazy: lazyRoute(
+          "customers",
+          async () => (await import("@/features/customers/CustomerDetailPage")).CustomerDetailPage,
+        ),
+      },
+            {
+        path: "payments",
+        lazy: lazyRoute(
+          "payments",
+          async () => (await import("@/features/payments/PaymentsPage")).PaymentsPage,
+        ),
+      },
+            {
+        path: "payments/:id",
+        lazy: lazyRoute(
+          "payments",
+          async () => (await import("@/features/payments/PaymentDetailPage")).PaymentDetailPage,
+        ),
+      },
+      {
+        path: "payments/:id/invoice",
+        lazy: lazyRoute(
+          "payments",
+          async () => (await import("@/features/payments/PaymentInvoicePage")).PaymentInvoicePage,
+        ),
+      },
+            {
+        path: "availability",
+        lazy: lazyRoute(
+          "availability",
+          async () => (await import("@/features/availability/AvailabilityPage")).AvailabilityPage,
         ),
       },
       ...allNavItems
